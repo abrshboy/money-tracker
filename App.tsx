@@ -1,11 +1,11 @@
 
 import React, { useState } from 'react';
-import { useAppState } from './hooks/useAppState';
-import Dashboard from './components/Dashboard';
-import AddExpenseModal from './components/AddExpenseModal';
-import CashPanel from './components/CashPanel';
-import History from './components/History';
-import { Icons } from './constants';
+import { useAppState } from './hooks/useAppState.ts';
+import Dashboard from './components/Dashboard.tsx';
+import AddExpenseModal from './components/AddExpenseModal.tsx';
+import CashPanel from './components/CashPanel.tsx';
+import History from './components/History.tsx';
+import { Icons } from './constants.tsx';
 
 type Tab = 'dashboard' | 'history' | 'cash';
 
@@ -50,7 +50,7 @@ const App: React.FC = () => {
           <div className="bg-red-50 border border-red-200 p-4 rounded-2xl text-red-700 text-xs font-bold uppercase tracking-tight">
             ⚠️ Firebase Error: {error} 
             <br/> 
-            <span className="font-normal normal-case opacity-70">Please check your Firestore Security Rules and ensure the database is created.</span>
+            <span className="font-normal normal-case opacity-70">Please check your Firestore Security Rules.</span>
           </div>
         </div>
       )}
@@ -67,7 +67,6 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* Persistent Floating Action Button */}
       <div className="fixed bottom-28 right-6 md:bottom-12 md:right-12 z-40">
         <button
           onClick={() => setIsModalOpen(true)}
@@ -78,7 +77,6 @@ const App: React.FC = () => {
         </button>
       </div>
 
-      {/* Navigation Bar */}
       <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-white/90 backdrop-blur-xl border border-slate-200 rounded-[2.5rem] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.15)] z-30 px-8 py-4 flex items-center justify-between">
         <button 
           onClick={() => setActiveTab('dashboard')}
@@ -105,7 +103,6 @@ const App: React.FC = () => {
         </button>
       </nav>
 
-      {/* Modal */}
       {isModalOpen && (
         <AddExpenseModal 
           onClose={() => setIsModalOpen(false)} 

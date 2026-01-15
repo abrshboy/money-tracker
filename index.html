@@ -34,9 +34,24 @@
   <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
     
-    <!-- We must use data-presets="react,typescript" and data-type="module" 
-         Note: In this browser-only mode, it's safer to have App and logic available. 
-         We'll keep index.tsx as the entry point but ensure headers are correct. -->
-    <script type="text/babel" data-presets="react,typescript" data-type="module" src="./index.tsx"></script>
+    <!-- 
+      By using data-type="module" and data-presets="react,typescript", 
+      Babel Standalone will attempt to transform the imports. 
+    -->
+    <script type="text/babel" data-presets="react,typescript" data-type="module">
+      import React from 'react';
+      import ReactDOM from 'react-dom/client';
+      import App from './App.tsx';
+
+      const rootElement = document.getElementById('root');
+      if (rootElement) {
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(
+          <React.StrictMode>
+            <App />
+          </React.StrictMode>
+        );
+      }
+    </script>
   </body>
 </html>
