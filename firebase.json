@@ -17,7 +17,7 @@
     ],
     "headers": [
       {
-        "source": "**/*.tsx",
+        "source": "**/*.{ts,tsx}",
         "headers": [
           {
             "key": "Content-Type",

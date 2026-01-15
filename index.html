@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>CLOUTKEEPER</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Load Babel for browser-side transpilation of TSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -35,7 +34,9 @@
   <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
     
-    <!-- Use text/babel and data-type=module to let Babel handle the TSX -->
-    <script type="text/babel" data-type="module" src="./index.tsx"></script>
+    <!-- We must use data-presets="react,typescript" and data-type="module" 
+         Note: In this browser-only mode, it's safer to have App and logic available. 
+         We'll keep index.tsx as the entry point but ensure headers are correct. -->
+    <script type="text/babel" data-presets="react,typescript" data-type="module" src="./index.tsx"></script>
   </body>
 </html>

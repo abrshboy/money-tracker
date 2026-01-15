@@ -1,7 +1,8 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
+// In browser-only mode with Babel, we often need to specify the extension if not bundled
+import App from './App.tsx';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
