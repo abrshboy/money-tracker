@@ -15,10 +15,21 @@ const App: React.FC = () => {
   const { 
     transactions, 
     cashAccount, 
+    loading,
+    error,
     addTransaction, 
     addCash, 
     reconcileCash 
   } = useAppState();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
+        <div className="text-4xl mb-4 animate-bounce">💸</div>
+        <h1 className="text-xl font-black italic tracking-tighter uppercase">Initializing Clout...</h1>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24 md:pb-8 flex flex-col items-center">
@@ -26,11 +37,23 @@ const App: React.FC = () => {
         <h1 className="text-3xl font-black italic tracking-tighter text-slate-950">
           CLOUT<span className="text-pink-500">KEEPER</span>
         </h1>
-        <div className="bg-slate-950 px-4 py-2 rounded-2xl shadow-xl flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
-          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white">Banked</span>
+        <div className="bg-slate-950 px-4 py-2 rounded-2xl shadow-xl flex items-center gap-2 border border-slate-800">
+          <div className={`w-1.5 h-1.5 rounded-full ${error ? 'bg-red-500' : 'bg-blue-400 animate-pulse'}`}></div>
+          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white">
+            {error ? 'Sync Error' : 'Cloud Sync'}
+          </span>
         </div>
       </header>
+
+      {error && (
+        <div className="w-full max-w-2xl px-6 mb-4">
+          <div className="bg-red-50 border border-red-200 p-4 rounded-2xl text-red-700 text-xs font-bold uppercase tracking-tight">
+            ⚠️ Firebase Error: {error} 
+            <br/> 
+            <span className="font-normal normal-case opacity-70">Please check your Firestore Security Rules and ensure the database is created.</span>
+          </div>
+        </div>
+      )}
 
       <main className="w-full max-w-2xl px-6 flex-1 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
         {activeTab === 'dashboard' && <Dashboard transactions={transactions} />}
