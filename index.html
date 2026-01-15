@@ -6,9 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>CLOUTKEEPER</title>
     
-    <!-- iOS PWA Meta Tags -->
+    <!-- PWA / iOS Optimization -->
+    <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CloutKeeper">
+    
+    <!-- App Icon (iPhone Home Screen) -->
+    <link rel="apple-touch-icon" href="https://imagizer.imageshack.com/img923/6784/tX0q0M.png">
+    
     <meta name="theme-color" content="#000000">
     
     <!-- Scripts -->
@@ -16,7 +22,14 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <script>
-      // Silence dev warnings
+      // Service Worker Registration
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW reg failed:', err));
+        });
+      }
+
+      // Suppress dev console noise
       const originalWarn = console.warn;
       console.warn = (...args) => {
         if (args[0] && typeof args[0] === 'string' && 
@@ -44,20 +57,22 @@
         -webkit-tap-highlight-color: transparent;
         -webkit-touch-callout: none;
         user-select: none;
-        overscroll-behavior-y: none; /* Prevents pull-to-refresh on PWA */
+        overscroll-behavior-y: none;
+        color: white;
       }
       .safe-top { padding-top: calc(var(--sat) + 1rem); }
-      .safe-bottom { padding-bottom: calc(var(--sab) + 5rem); }
-      .nav-safe-bottom { bottom: calc(var(--sab) + 1rem); }
+      .safe-bottom { padding-bottom: calc(var(--sab) + 6rem); }
+      .nav-safe-bottom { bottom: calc(var(--sab) + 1.5rem); }
       
       @supports (-webkit-touch-callout: none) {
         .min-h-ios { min-height: -webkit-fill-available; }
       }
       
-      /* Smoother 120Hz Transitions */
       .pro-motion-transition {
         transition: transform 0.2s cubic-bezier(0.33, 1, 0.68, 1), opacity 0.2s ease;
       }
+
+      ::-webkit-scrollbar { display: none; }
     </style>
 
     <script type="importmap">
@@ -71,14 +86,13 @@
 }
 </script>
   </head>
-  <body class="text-white">
+  <body>
     <div id="root"></div>
     
     <script type="text/babel" data-presets="react,typescript" data-type="module">
       import React, { useState, useEffect } from 'react';
       import ReactDOM from 'react-dom/client';
       
-      // --- CONSTANTS ---
       const CATEGORIES = ['Food', 'Transport', 'Bills', 'Fun', 'Salary', 'Side Hustle', 'Gift', 'Other'];
       const CATEGORY_COLORS = {
         Food: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
@@ -105,7 +119,6 @@
 
       const formatCurrency = (n) => new Intl.NumberFormat('en-ET', { style: 'currency', currency: 'ETB' }).format(n).replace('ETB', 'Br');
 
-      // --- APP COMPONENT ---
       const App = () => {
         const [activeTab, setActiveTab] = useState('dashboard');
         const [isModalOpen, setIsModalOpen] = useState(false);
@@ -137,9 +150,17 @@
         return (
           <div className="min-h-ios bg-black flex flex-col items-center overflow-x-hidden">
             <header className="w-full max-w-2xl px-6 safe-top pb-4 flex items-center justify-between">
-              <h1 className="text-2xl font-black italic tracking-tighter text-white">CLOUT<span className="text-pink-500">KEEPER</span></h1>
+              <div className="flex items-center gap-3">
+                 <img 
+                    src="https://imagizer.imageshack.com/img923/6784/tX0q0M.png" 
+                    className="w-10 h-10 rounded-xl object-cover border border-zinc-800" 
+                    alt="Logo" 
+                    onError={(e) => e.target.style.display = 'none'}
+                 />
+                 <h1 className="text-2xl font-black italic tracking-tighter text-white">CLOUT<span className="text-pink-500">KEEPER</span></h1>
+              </div>
               <div className="bg-zinc-900/80 px-4 py-1.5 rounded-full border border-zinc-800">
-                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">iPhone Pro Max</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">PWA NATIVE</span>
               </div>
             </header>
 
@@ -149,18 +170,16 @@
               {activeTab === 'cash' && <Cash cash={cash} setCash={setCash} />}
             </main>
 
-            {/* Float Action Button */}
-            <div className="fixed bottom-32 right-6 z-50">
+            <div className="fixed bottom-36 right-6 z-50">
               <button 
                 onClick={() => setIsModalOpen(true)}
-                className="w-16 h-16 bg-white text-black rounded-full shadow-[0_0_30px_rgba(255,255,255,0.2)] flex items-center justify-center active:scale-90 pro-motion-transition"
+                className="w-16 h-16 bg-white text-black rounded-full shadow-[0_0_30px_rgba(255,255,255,0.4)] flex items-center justify-center active:scale-90 pro-motion-transition"
               >
                 <Icons.Plus />
               </button>
             </div>
 
-            {/* OLED Navigation */}
-            <nav className="fixed nav-safe-bottom left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-zinc-900/60 backdrop-blur-2xl border border-zinc-800/50 rounded-full z-40 px-10 py-5 flex items-center justify-between shadow-2xl">
+            <nav className="fixed nav-safe-bottom left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-zinc-900/60 backdrop-blur-3xl border border-zinc-800/40 rounded-full z-40 px-10 py-5 flex items-center justify-between shadow-2xl">
               <NavBtn active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon="🏠" label="Stats" />
               <NavBtn active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon="🧾" label="Feed" />
               <NavBtn active={activeTab === 'cash'} onClick={() => setActiveTab('cash')} icon="💸" label="Cash" />
@@ -183,26 +202,13 @@
         const inc = transactions.filter(t => t.type === 'Income').reduce((s, t) => s + t.amount, 0);
         return (
           <div className="animate-in fade-in duration-500 space-y-6">
-            <div className="bg-zinc-900 rounded-[2.5rem] p-8 border border-zinc-800 relative overflow-hidden">
+            <div className="bg-zinc-900/50 rounded-[2.5rem] p-8 border border-zinc-800/50 relative overflow-hidden">
               <span className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em]">Total Balance</span>
               <h2 className="text-5xl font-black italic tracking-tighter mt-2 text-white">{formatCurrency(inc - out)}</h2>
-              <div className="mt-10 grid grid-cols-2 gap-4 border-t border-zinc-800 pt-6">
+              <div className="mt-10 grid grid-cols-2 gap-4 border-t border-zinc-800/30 pt-6">
                 <div><p className="text-zinc-500 text-[9px] font-black uppercase">Clout In</p><p className="text-emerald-400 font-bold text-lg">{formatCurrency(inc)}</p></div>
                 <div><p className="text-zinc-500 text-[9px] font-black uppercase">Clout Out</p><p className="text-pink-500 font-bold text-lg">{formatCurrency(out)}</p></div>
               </div>
-            </div>
-            <div className="bg-zinc-950 p-6 rounded-3xl border border-zinc-900">
-               <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-600 mb-6 text-center">Recent Burn</h3>
-               <div className="space-y-4">
-                 {transactions.slice(0, 4).map(t => (
-                   <div key={t.id} className="flex items-center justify-between">
-                     <span className="text-zinc-400 font-bold text-sm uppercase">{t.category}</span>
-                     <span className={`font-black italic ${t.type === 'Income' ? 'text-emerald-500' : 'text-zinc-200'}`}>
-                       {t.type === 'Income' ? '+' : '-'}{formatCurrency(t.amount)}
-                     </span>
-                   </div>
-                 ))}
-               </div>
             </div>
           </div>
         );
@@ -212,7 +218,7 @@
         <div className="space-y-4 animate-in fade-in duration-500 pb-10">
           <h2 className="text-xl font-black italic uppercase tracking-tighter">Digital Receipts</h2>
           {transactions.map(t => (
-            <div key={t.id} className="bg-zinc-900/50 p-5 rounded-[2rem] border border-zinc-800/50 flex items-center justify-between">
+            <div key={t.id} className="bg-zinc-900/40 p-5 rounded-[2rem] border border-zinc-800/40 flex items-center justify-between">
                <div className="flex items-center gap-4">
                   <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl ${CATEGORY_COLORS[t.category]}`}>
                     {Icons[t.category] ? React.createElement(Icons[t.category]) : '✨'}
@@ -235,21 +241,18 @@
         const [v, setV] = React.useState('');
         return (
           <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="bg-zinc-900 rounded-[2.5rem] p-10 text-center border-2 border-emerald-500/20">
+            <div className="bg-zinc-900/50 rounded-[2.5rem] p-10 text-center border-2 border-emerald-500/10">
                <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2">Cash Assets</p>
                <h2 className="text-6xl font-black italic tracking-tighter text-emerald-400">{formatCurrency(cash.balance)}</h2>
             </div>
-            <div className="p-8 bg-zinc-900 rounded-[2rem] border border-zinc-800">
+            <div className="p-8 bg-zinc-900/40 rounded-[2rem] border border-zinc-800/40">
                <input 
-                type="number" 
-                value={v} 
-                onChange={e => setV(e.target.value)} 
-                placeholder="0.00" 
-                className="w-full bg-black py-6 rounded-2xl text-4xl font-black italic text-center text-white outline-none border-2 border-zinc-800 focus:border-white transition-all"
+                type="number" value={v} onChange={e => setV(e.target.value)} placeholder="0.00" 
+                className="w-full bg-black py-6 rounded-2xl text-4xl font-black italic text-center text-white outline-none border-2 border-zinc-800 focus:border-white transition-colors"
                />
                <div className="grid grid-cols-2 gap-3 mt-4">
-                 <button onClick={() => { setCash({ balance: cash.balance + Number(v), lastUpdated: Date.now() }); setV(''); }} className="bg-white text-black py-5 rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all">Deposit</button>
-                 <button onClick={() => { setCash({ balance: Number(v), lastUpdated: Date.now() }); setV(''); }} className="bg-zinc-800 text-zinc-400 py-5 rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all">Reconcile</button>
+                 <button onClick={() => { setCash({ balance: cash.balance + Number(v), lastUpdated: Date.now() }); setV(''); }} className="bg-white text-black py-5 rounded-2xl font-black uppercase text-xs active:scale-95 transition-all">Deposit</button>
+                 <button onClick={() => { setCash({ balance: Number(v), lastUpdated: Date.now() }); setV(''); }} className="bg-zinc-800 text-zinc-400 py-5 rounded-2xl font-black uppercase text-xs active:scale-95 transition-all">Sync</button>
                </div>
             </div>
           </div>
@@ -259,10 +262,10 @@
       const AddModal = ({ onClose, onSubmit }) => {
         const [f, setF] = React.useState({ amount: '', type: 'Expense', category: 'Food', paymentMethod: 'Cash', note: '' });
         return (
-          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
-            <div className="bg-zinc-900 w-full max-w-lg rounded-[2.5rem] p-8 pb-[calc(2rem+var(--sab))] border border-zinc-800 animate-in slide-in-from-bottom duration-300">
+          <div className="fixed inset-0 z-[100] flex items-end justify-center p-4 bg-black/80 backdrop-blur-2xl">
+            <div className="bg-zinc-900 w-full max-w-lg rounded-[3rem] p-8 pb-[calc(2rem+var(--sab))] border border-zinc-800 animate-in slide-in-from-bottom duration-300">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-black italic uppercase tracking-tighter">New Clout</h2>
+                <h2 className="text-xl font-black italic uppercase tracking-tighter">New Entry</h2>
                 <button onClick={onClose} className="p-2 text-zinc-500 text-2xl">✕</button>
               </div>
               <div className="flex bg-black p-1 rounded-2xl border border-zinc-800 mb-6">
@@ -271,11 +274,7 @@
                 ))}
               </div>
               <input 
-                autoFocus
-                type="number" 
-                placeholder="0.00" 
-                value={f.amount} 
-                onChange={e => setF({...f, amount: e.target.value})} 
+                autoFocus type="number" placeholder="0.00" value={f.amount} onChange={e => setF({...f, amount: e.target.value})} 
                 className="w-full bg-transparent py-8 text-7xl font-black italic text-center text-white outline-none placeholder:text-zinc-800" 
               />
               <div className="grid grid-cols-4 gap-2 mt-6">
@@ -286,14 +285,7 @@
                    </button>
                  ))}
               </div>
-              <div className="grid grid-cols-2 gap-3 mt-6">
-                <select value={f.paymentMethod} onChange={e => setF({...f, paymentMethod: e.target.value})} className="bg-black text-zinc-400 p-4 rounded-2xl font-black uppercase text-[10px] border-zinc-800 border">
-                  <option value="Cash">Cash (Bill)</option>
-                  <option value="Non-cash">Digital</option>
-                </select>
-                <input value={f.note} onChange={e => setF({...f, note: e.target.value})} placeholder="Vibe..." className="bg-black text-zinc-400 p-4 rounded-2xl font-black uppercase text-[10px] border-zinc-800 border" />
-              </div>
-              <button onClick={() => { if(f.amount) onSubmit({...f, amount: Number(f.amount)}); }} className="w-full bg-white text-black py-6 rounded-full font-black italic uppercase text-lg mt-8 active:scale-95 transition-all">Secure the clout</button>
+              <button onClick={() => { if(f.amount) onSubmit({...f, amount: Number(f.amount)}); }} className="w-full bg-white text-black py-6 rounded-full font-black italic uppercase text-lg mt-8 active:scale-95 transition-all">Secure entry</button>
             </div>
           </div>
         );
