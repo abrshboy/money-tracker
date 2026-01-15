@@ -17,6 +17,15 @@
       @supports (-webkit-touch-callout: none) {
         .min-h-screen { min-height: -webkit-fill-available; }
       }
+      /* Custom scrollbar for a cleaner look */
+      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+      .animate-float { animation: float 3s ease-in-out infinite; }
+      @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+      }
     </style>
 
     <script type="importmap">
@@ -25,7 +34,6 @@
     "react": "https://esm.sh/react@19.0.0",
     "react-dom": "https://esm.sh/react-dom@19.0.0",
     "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react/": "https://esm.sh/react@^19.2.3/"
   }
 }
@@ -34,24 +42,258 @@
   <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
     
-    <!-- 
-      By using data-type="module" and data-presets="react,typescript", 
-      Babel Standalone will attempt to transform the imports. 
-    -->
+    <!-- data-type="module" is CRITICAL for Babel to handle 'import' statements -->
     <script type="text/babel" data-presets="react,typescript" data-type="module">
-      import React from 'react';
+      import React, { useState, useEffect, useCallback } from 'react';
       import ReactDOM from 'react-dom/client';
-      import App from './App.tsx';
+      
+      // --- UTILS ---
+      const formatCurrency = (amount) => {
+        return new Intl.NumberFormat('en-ET', {
+          style: 'currency',
+          currency: 'ETB',
+          minimumFractionDigits: 2
+        }).format(amount).replace('ETB', 'Br');
+      };
 
-      const rootElement = document.getElementById('root');
-      if (rootElement) {
-        const root = ReactDOM.createRoot(rootElement);
-        root.render(
-          <React.StrictMode>
-            <App />
-          </React.StrictMode>
+      const formatDate = (timestamp) => {
+        return new Intl.DateTimeFormat('en-US', {
+          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        }).format(new Date(timestamp));
+      };
+
+      // --- CONSTANTS ---
+      const CATEGORIES = ['Food', 'Transport', 'Bills', 'Fun', 'Salary', 'Side Hustle', 'Gift', 'Other'];
+      const CATEGORY_COLORS = {
+        Food: 'bg-orange-100 text-orange-700',
+        Transport: 'bg-blue-100 text-blue-700',
+        Bills: 'bg-purple-100 text-purple-700',
+        Fun: 'bg-pink-100 text-pink-700',
+        Salary: 'bg-emerald-100 text-emerald-700',
+        'Side Hustle': 'bg-cyan-100 text-cyan-700',
+        Gift: 'bg-yellow-100 text-yellow-700',
+        Other: 'bg-slate-100 text-slate-700',
+      };
+
+      const Icons = {
+        Food: () => <span>🍕</span>,
+        Transport: () => <span>🛹</span>,
+        Bills: () => <span>💸</span>,
+        Fun: () => <span>🎡</span>,
+        Salary: () => <span>💰</span>,
+        'Side Hustle': () => <span>🚀</span>,
+        Gift: () => <span>🎁</span>,
+        Other: () => <span>✨</span>,
+        Plus: () => <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
+        Wallet: () => <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>,
+        History: () => <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      };
+
+      // --- MAIN APP ---
+      const App = () => {
+        const [activeTab, setActiveTab] = useState('dashboard');
+        const [isModalOpen, setIsModalOpen] = useState(false);
+        const [transactions, setTransactions] = useState([]);
+        const [cashAccount, setCashAccount] = useState({ balance: 0, lastUpdated: Date.now() });
+
+        useEffect(() => {
+          const savedTxs = localStorage.getItem('clout_txs');
+          const savedCash = localStorage.getItem('clout_cash');
+          if (savedTxs) setTransactions(JSON.parse(savedTxs));
+          if (savedCash) setCashAccount(JSON.parse(savedCash));
+        }, []);
+
+        useEffect(() => {
+          localStorage.setItem('clout_txs', JSON.stringify(transactions));
+          localStorage.setItem('clout_cash', JSON.stringify(cashAccount));
+        }, [transactions, cashAccount]);
+
+        const addTransaction = (data) => {
+          const newTx = { ...data, id: Math.random().toString(36).substr(2, 9), timestamp: Date.now() };
+          setTransactions(prev => [newTx, ...prev]);
+          if (data.paymentMethod === 'Cash') {
+            const multiplier = data.type === 'Income' ? 1 : -1;
+            setCashAccount(prev => ({
+              balance: prev.balance + (data.amount * multiplier),
+              lastUpdated: Date.now()
+            }));
+          }
+          setIsModalOpen(false);
+        };
+
+        const addCash = (amount) => {
+          setCashAccount(prev => ({ balance: prev.balance + amount, lastUpdated: Date.now() }));
+        };
+
+        const reconcileCash = (actual) => {
+          setCashAccount({ balance: actual, lastUpdated: Date.now() });
+        };
+
+        return (
+          <div className="min-h-screen bg-slate-50 pb-24 flex flex-col items-center">
+            <header className="w-full max-w-2xl px-6 pt-10 pb-6 flex items-center justify-between">
+              <h1 className="text-3xl font-black italic tracking-tighter text-slate-950 uppercase">
+                CLOUT<span className="text-pink-500">KEEPER</span>
+              </h1>
+              <div className="bg-slate-950 px-3 py-1.5 rounded-2xl flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></div>
+                <span className="text-[8px] font-black uppercase tracking-widest text-white">Local Storage</span>
+              </div>
+            </header>
+
+            <main className="w-full max-w-2xl px-6 flex-1 space-y-8 transition-all duration-300">
+              {activeTab === 'dashboard' && <DashboardView transactions={transactions} />}
+              {activeTab === 'history' && <HistoryView transactions={transactions} />}
+              {activeTab === 'cash' && <CashView cashAccount={cashAccount} onAdd={addCash} onReconcile={reconcileCash} />}
+            </main>
+
+            <div className="fixed bottom-28 right-6 z-40">
+              <button onClick={() => setIsModalOpen(true)} className="w-16 h-16 bg-slate-950 text-white rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 active:scale-95 border-4 border-white">
+                <Icons.Plus />
+              </button>
+            </div>
+
+            <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-white/90 backdrop-blur-xl border border-slate-200 rounded-[2.5rem] shadow-2xl z-30 px-8 py-4 flex items-center justify-between">
+              <NavBtn active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>} label="Home" />
+              <NavBtn active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<Icons.History />} label="Flow" />
+              <NavBtn active={activeTab === 'cash'} onClick={() => setActiveTab('cash')} icon={<Icons.Wallet />} label="Cash" />
+            </nav>
+
+            {isModalOpen && <AddModal onClose={() => setIsModalOpen(false)} onSubmit={addTransaction} />}
+          </div>
         );
-      }
+      };
+
+      const NavBtn = ({ active, onClick, icon, label }) => (
+        <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-slate-950 scale-110' : 'text-slate-300'}`}>
+          {icon}
+          <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>
+        </button>
+      );
+
+      const DashboardView = ({ transactions }) => {
+        const totalOut = transactions.filter(t => t.type === 'Expense').reduce((s, t) => s + t.amount, 0);
+        const totalIn = transactions.filter(t => t.type === 'Income').reduce((s, t) => s + t.amount, 0);
+        return (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+            <div className="bg-slate-950 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden">
+              <span className="text-slate-500 text-[10px] font-black uppercase tracking-widest block mb-2">Monthly Clout</span>
+              <h2 className="text-5xl font-black italic tracking-tighter text-emerald-400">{formatCurrency(totalIn - totalOut)}</h2>
+              <div className="mt-8 flex gap-8 border-t border-slate-800 pt-6">
+                <div><span className="text-slate-500 text-[9px] font-black uppercase block">In</span><span className="text-emerald-400 font-bold">{formatCurrency(totalIn)}</span></div>
+                <div><span className="text-slate-500 text-[9px] font-black uppercase block">Out</span><span className="text-pink-500 font-bold">{formatCurrency(totalOut)}</span></div>
+              </div>
+            </div>
+            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+              <h3 className="text-slate-900 font-black uppercase text-[10px] tracking-widest mb-4">Allocation</h3>
+              <div className="space-y-4">
+                {CATEGORIES.filter(c => transactions.some(t => t.category === c)).map(cat => {
+                   const amount = transactions.filter(t => t.category === cat && t.type === 'Expense').reduce((s, t) => s + t.amount, 0);
+                   if (amount === 0) return null;
+                   return (
+                     <div key={cat} className="flex items-center justify-between">
+                        <span className="text-slate-600 font-bold text-sm">{cat}</span>
+                        <span className="text-slate-950 font-black text-sm">{formatCurrency(amount)}</span>
+                     </div>
+                   );
+                })}
+                {!transactions.some(t => t.type === 'Expense') && <p className="text-center text-slate-300 text-xs py-4 uppercase font-bold tracking-tighter">No expenditures detected.</p>}
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const HistoryView = ({ transactions }) => (
+        <div className="space-y-4 animate-in fade-in">
+          <h2 className="text-xl font-black italic uppercase tracking-tighter">Activity Feed</h2>
+          {transactions.map(tx => (
+            <div key={tx.id} className="bg-white p-4 rounded-3xl border border-slate-100 flex items-center gap-4 hover:border-slate-300 transition-colors">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl ${CATEGORY_COLORS[tx.category]}`}>
+                {Icons[tx.category] ? React.createElement(Icons[tx.category]) : '✨'}
+              </div>
+              <div className="flex-1">
+                <div className="flex justify-between items-center">
+                  <span className="font-black text-sm uppercase tracking-tight">{tx.category}</span>
+                  <span className={`font-black italic ${tx.type === 'Income' ? 'text-emerald-500' : 'text-slate-950'}`}>
+                    {tx.type === 'Income' ? '+' : '-'}{formatCurrency(tx.amount)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-[10px] text-slate-400 font-bold uppercase mt-1">
+                  <span>{tx.note || 'Journal entry empty'}</span>
+                  <span>{formatDate(tx.timestamp)}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+          {transactions.length === 0 && <div className="py-20 text-center text-slate-300 font-black italic uppercase">Zero activity.</div>}
+        </div>
+      );
+
+      const CashView = ({ cashAccount, onAdd, onReconcile }) => {
+        const [amt, setAmt] = useState('');
+        return (
+          <div className="space-y-6 animate-in fade-in">
+            <div className="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-xl">
+              <span className="text-slate-500 text-[10px] font-black uppercase tracking-widest block">Physical Assets</span>
+              <h2 className="text-5xl font-black italic tracking-tighter mt-2">{formatCurrency(cashAccount.balance)}</h2>
+              <span className="text-slate-600 text-[9px] font-bold block mt-4 uppercase tracking-wider">Last Count: {formatDate(cashAccount.lastUpdated)}</span>
+            </div>
+            <div className="bg-white p-6 rounded-3xl border border-slate-100">
+               <input type="number" value={amt} onChange={e => setAmt(e.target.value)} placeholder="0.00" className="w-full p-6 bg-slate-50 rounded-2xl text-4xl font-black outline-none mb-4 text-center placeholder:text-slate-200" />
+               <div className="grid grid-cols-2 gap-3">
+                 <button onClick={() => { onAdd(Number(amt)); setAmt(''); }} className="bg-slate-950 text-white py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-900 active:scale-95 transition-all">Add Cash</button>
+                 <button onClick={() => { onReconcile(Number(amt)); setAmt(''); }} className="bg-white border-2 border-slate-950 text-slate-950 py-5 rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all">Reconcile</button>
+               </div>
+            </div>
+          </div>
+        );
+      };
+
+      const AddModal = ({ onClose, onSubmit }) => {
+        const [val, setVal] = useState({ amount: '', category: 'Food', type: 'Expense', note: '', paymentMethod: 'Cash' });
+        return (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+            <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 space-y-6 animate-in slide-in-from-bottom duration-300">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-black italic uppercase tracking-tighter">New Ledger Entry</h2>
+                <button onClick={onClose} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors">✕</button>
+              </div>
+              <div className="flex bg-slate-100 p-1 rounded-2xl">
+                {['Income', 'Expense'].map(t => (
+                  <button key={t} onClick={() => setVal({...val, type: t, category: t === 'Income' ? 'Salary' : 'Food'})} className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${val.type === t ? 'bg-white shadow-sm scale-[1.02]' : 'text-slate-400'}`}>{t}</button>
+                ))}
+              </div>
+              <input type="number" autoFocus placeholder="0.00" value={val.amount} onChange={e => setVal({...val, amount: e.target.value})} className="w-full py-8 text-6xl font-black italic bg-transparent border-none outline-none placeholder:text-slate-100 text-center" />
+              <div className="grid grid-cols-4 gap-2">
+                {(val.type === 'Expense' ? ['Food', 'Transport', 'Bills', 'Fun'] : ['Salary', 'Side Hustle', 'Gift', 'Other']).map(c => (
+                  <button key={c} onClick={() => setVal({...val, category: c})} className={`flex flex-col items-center gap-1 p-3 rounded-2xl border-2 transition-all ${val.category === c ? 'border-slate-950 bg-slate-950 text-white shadow-lg' : 'border-slate-50 bg-slate-50 text-slate-400'}`}>
+                    <span className="text-xl">{Icons[c] ? React.createElement(Icons[c]) : '✨'}</span>
+                    <span className="text-[8px] font-black uppercase truncate w-full text-center">{c}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-2">Method</label>
+                  <select value={val.paymentMethod} onChange={e => setVal({...val, paymentMethod: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl font-black uppercase text-[10px] outline-none border-none">
+                    <option value="Cash">Cash (Bill)</option>
+                    <option value="Non-cash">Digital (Bank)</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 ml-2">Note</label>
+                  <input type="text" placeholder="Context..." value={val.note} onChange={e => setVal({...val, note: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl font-black uppercase text-[10px] outline-none border-none" />
+                </div>
+              </div>
+              <button onClick={() => { if(val.amount) onSubmit({...val, amount: Number(val.amount)}); }} className="w-full bg-slate-950 text-white py-6 rounded-[2rem] font-black italic uppercase text-lg shadow-xl hover:bg-slate-900 active:scale-95 transition-all">Submit Entry</button>
+            </div>
+          </div>
+        );
+      };
+
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
     </script>
   </body>
 </html>
